@@ -1,0 +1,343 @@
+<!DOCTYPE html><!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مساعد الطريق الذكي</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #121212;
+            color: #ffffff;
+            padding: 20px;
+            margin: 0;
+        }
+        /* تصميم زر ضخم يسهل على الكفيف لمسه في أي مكان بالشاشة */
+        .main-btn {
+            width: 80%;
+            max-width: 300px;
+            height: 150px;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            margin: 40px auto;
+            display: block;
+            cursor: pointer;
+            box-shadow: 0 8px 15px rgba(0,123,255,0.3);
+        }
+        .main-btn:active {
+            background-color: #0056b3;
+        }
+        #status {
+            font-size: 18px;
+            margin-top: 20px;
+            color: #bb86fc;
+        }
+        #places-list {
+            list-style: none;
+            padding: 0;
+            font-size: 20px;
+        }
+        #places-list li {
+            background: #1e1e1e;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>مساعد الطريق الكفيف</h1>
+    <p>اضغط في أي مكان على الزر الأزرق للتحدث مع التطبيق</p>
+
+    <button class="main-btn" onclick="startListening()">إضغط للتحدث</button>
+
+    <div id="status">حالة التطبيق: جاهز للاستخدام</div>
+    
+    <ul id="places-list">
+        </ul>
+
+    <script>
+        // إعدادات تحويل النص إلى صوت (ليتحدث التطبيق مع المستخدم)
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ar-SA'; // النطق باللغة العربية
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // ترحيب تلقائي عند فتح التطبيق وشرح طريقة الاستخدام
+        window.onload = function() {
+            setTimeout(() => {
+                speak("أهلاً بك في مساعد الطريق. اضغط على الزر في منتصف الشاشة وتحدث معي، يمكنك أن تسألني: أين أنا؟ أو ما هي الأماكن القريبة؟");
+            }, 1000);
+        };
+
+        // إعدادات التعرف على الصوت (ليستمع التطبيق للمستخدم)
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            alert("عذراً، متصفحك لا يدعم خاصية التعرف على الصوت.");
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'ar-SA'; // استماع باللغة العربية
+        recognition.interimResults = false;
+
+        function startListening() {
+            recognition.start();
+            document.getElementById('status').innerText = "جاري الاستماع إليك...";
+            speak("أنا أستمع إليك الآن");
+        }
+
+        // معالجة الكلام الذي قاله المستخدم
+        recognition.onresult = function(event) {
+            const userCommand = event.results[0][0].transcript;
+            document.getElementById('status').innerText = "قلتَ: " + userCommand;
+            
+            handleUserCommand(userCommand);
+        };
+
+        recognition.onerror = function() {
+            document.getElementById('status').innerText = "خطأ في التعرف على الصوت.";
+            speak("عذراً، لم أسمعك جيداً. يرجى المحاولة مرة أخرى.");
+        };
+
+        // تحليل ذكاء التطبيق للرد على الكلمات المفتاحية
+        function handleUserCommand(command) {
+            if (command.includes("أين أنا") || command.includes("مكان") || command.includes("موقعي")) {
+                getLocation();
+            } else if (command.includes("الأماكن القريبة") || command.includes("أماكن قريبة") || command.includes("قريب مني")) {
+                findNearbyPlaces();
+            } else {
+                speak("فهمت أنك تقول " + command + ". ولكن يمكنك سؤالي عن موقعك أو الأماكن القريبة فقط حالياً.");
+            }
+        }
+
+        // وظيفة تحديد الموقع الجغرافي الحالي للمستخدم
+        function getLocation() {
+            if (navigator.geolocation) {
+                document.getElementById('status').innerText = "جاري تحديد موقعك الجغرافي...";
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    // تنبيه: في التطبيق الحقيقي نقوم بإرسال هذه الإحداثيات لـ Google Maps لمعرفة اسم الشارع
+                    const reply = "تم تحديد موقعك بنجاح. أنت الآن في منطقة آمنة، وإحداثياتك هي خط عرض " + lat.toFixed(2) + " وخط طول " + lon.toFixed(2);
+                    speak(reply);
+                    document.getElementById('status').innerText = "تم تحديد الموقع.";
+                }, function() {
+                    speak("عذراً، فشلت في تحديد موقعك. تأكد من تفعيل خدمة تحديد الموقع في هاتفك.");
+                });
+            } else {
+                speak("عذراً، جهازك لا يدعم خاصية تحديد الموقع.");
+            }
+        }
+
+        // وظيفة محاكاة الأماكن القريبة (تطبيق افتراضي)
+        function findNearbyPlaces() {
+            document.getElementById('status').innerText = "جاري البحث عن الأماكن القريبة...";
+            
+            // في التطبيقات المتقدمة نستخدم (Google Places API) لجلب الأماكن الحقيقية، هنا وضعنا أماكن افتراضية للشرح:
+            const places = [
+                "صيدلية الشفاء على بعد خمسين متراً",
+                "سوبر ماركت الأمانة على بعد مئة متر",
+                "مستشفى الأمل على بعد ربع كيلومتر"
+            ];
+
+            // تفريغ القائمة القديمة
+            const listContainer = document.getElementById('places-list');
+            listContainer.innerHTML = "";
+
+            // نطق الأماكن وعرضها
+            speak("الأماكن القريبة منك هي:");
+            
+            places.forEach((place, index) => {
+                setTimeout(() => {
+                    // إضافة المكان للقائمة بصرياً
+                    const li = document.createElement('li');
+                    li.innerText = place;
+                    listContainer.appendChild(li);
+                    // نطق المكان
+                    speak(place);
+                }, index * 2500); // فاصل زمني بين كل جملة وجملة لكي لا تتداخل الأصوات
+            });
+        }
+    </script>
+</body>
+</html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مساعد الطريق الذكي</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #121212;
+            color: #ffffff;
+            padding: 20px;
+            margin: 0;
+        }
+        /* تصميم زر ضخم يسهل على الكفيف لمسه في أي مكان بالشاشة */
+        .main-btn {
+            width: 80%;
+            max-width: 300px;
+            height: 150px;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            margin: 40px auto;
+            display: block;
+            cursor: pointer;
+            box-shadow: 0 8px 15px rgba(0,123,255,0.3);
+        }
+        .main-btn:active {
+            background-color: #0056b3;
+        }
+        #status {
+            font-size: 18px;
+            margin-top: 20px;
+            color: #bb86fc;
+        }
+        #places-list {
+            list-style: none;
+            padding: 0;
+            font-size: 20px;
+        }
+        #places-list li {
+            background: #1e1e1e;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>مساعد الطريق الكفيف</h1>
+    <p>اضغط في أي مكان على الزر الأزرق للتحدث مع التطبيق</p>
+
+    <button class="main-btn" onclick="startListening()">إضغط للتحدث</button>
+
+    <div id="status">حالة التطبيق: جاهز للاستخدام</div>
+    
+    <ul id="places-list">
+        </ul>
+
+    <script>
+        // إعدادات تحويل النص إلى صوت (ليتحدث التطبيق مع المستخدم)
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'ar-SA'; // النطق باللغة العربية
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // ترحيب تلقائي عند فتح التطبيق وشرح طريقة الاستخدام
+        window.onload = function() {
+            setTimeout(() => {
+                speak("أهلاً بك في مساعد الطريق. اضغط على الزر في منتصف الشاشة وتحدث معي، يمكنك أن تسألني: أين أنا؟ أو ما هي الأماكن القريبة؟");
+            }, 1000);
+        };
+
+        // إعدادات التعرف على الصوت (ليستمع التطبيق للمستخدم)
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            alert("عذراً، متصفحك لا يدعم خاصية التعرف على الصوت.");
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'ar-SA'; // استماع باللغة العربية
+        recognition.interimResults = false;
+
+        function startListening() {
+            recognition.start();
+            document.getElementById('status').innerText = "جاري الاستماع إليك...";
+            speak("أنا أستمع إليك الآن");
+        }
+
+        // معالجة الكلام الذي قاله المستخدم
+        recognition.onresult = function(event) {
+            const userCommand = event.results[0][0].transcript;
+            document.getElementById('status').innerText = "قلتَ: " + userCommand;
+            
+            handleUserCommand(userCommand);
+        };
+
+        recognition.onerror = function() {
+            document.getElementById('status').innerText = "خطأ في التعرف على الصوت.";
+            speak("عذراً، لم أسمعك جيداً. يرجى المحاولة مرة أخرى.");
+        };
+
+        // تحليل ذكاء التطبيق للرد على الكلمات المفتاحية
+        function handleUserCommand(command) {
+            if (command.includes("أين أنا") || command.includes("مكان") || command.includes("موقعي")) {
+                getLocation();
+            } else if (command.includes("الأماكن القريبة") || command.includes("أماكن قريبة") || command.includes("قريب مني")) {
+                findNearbyPlaces();
+            } else {
+                speak("فهمت أنك تقول " + command + ". ولكن يمكنك سؤالي عن موقعك أو الأماكن القريبة فقط حالياً.");
+            }
+        }
+
+        // وظيفة تحديد الموقع الجغرافي الحالي للمستخدم
+        function getLocation() {
+            if (navigator.geolocation) {
+                document.getElementById('status').innerText = "جاري تحديد موقعك الجغرافي...";
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    // تنبيه: في التطبيق الحقيقي نقوم بإرسال هذه الإحداثيات لـ Google Maps لمعرفة اسم الشارع
+                    const reply = "تم تحديد موقعك بنجاح. أنت الآن في منطقة آمنة، وإحداثياتك هي خط عرض " + lat.toFixed(2) + " وخط طول " + lon.toFixed(2);
+                    speak(reply);
+                    document.getElementById('status').innerText = "تم تحديد الموقع.";
+                }, function() {
+                    speak("عذراً، فشلت في تحديد موقعك. تأكد من تفعيل خدمة تحديد الموقع في هاتفك.");
+                });
+            } else {
+                speak("عذراً، جهازك لا يدعم خاصية تحديد الموقع.");
+            }
+        }
+
+        // وظيفة محاكاة الأماكن القريبة (تطبيق افتراضي)
+        function findNearbyPlaces() {
+            document.getElementById('status').innerText = "جاري البحث عن الأماكن القريبة...";
+            
+            // في التطبيقات المتقدمة نستخدم (Google Places API) لجلب الأماكن الحقيقية، هنا وضعنا أماكن افتراضية للشرح:
+            const places = [
+                "صيدلية الشفاء على بعد خمسين متراً",
+                "سوبر ماركت الأمانة على بعد مئة متر",
+                "مستشفى الأمل على بعد ربع كيلومتر"
+            ];
+
+            // تفريغ القائمة القديمة
+            const listContainer = document.getElementById('places-list');
+            listContainer.innerHTML = "";
+
+            // نطق الأماكن وعرضها
+            speak("الأماكن القريبة منك هي:");
+            
+            places.forEach((place, index) => {
+                setTimeout(() => {
+                    // إضافة المكان للقائمة بصرياً
+                    const li = document.createElement('li');
+                    li.innerText = place;
+                    listContainer.appendChild(li);
+                    // نطق المكان
+                    speak(place);
+                }, index * 2500); // فاصل زمني بين كل جملة وجملة لكي لا تتداخل الأصوات
+            });
+        }
+    </script>
+</body>
+</html>
